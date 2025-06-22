@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   monitor.c                                          :+:      :+:    :+:   */
+/*   monitor.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: okhourss <okhourss@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 13:12:38 by okhourss          #+#    #+#             */
-/*   Updated: 2025/06/22 13:12:38 by okhourss         ###   ########.fr       */
+/*   Updated: 2025/06/22 15:00:00 by assistant         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,11 @@ static int check_death(t_philo *p, t_args *args)
 	if (now - p->last_meal_ts > args->time_to_die)
 	{
 		pthread_mutex_unlock(&p->mtx_meal);
+		print_log(p, "died");
+
 		pthread_mutex_lock(&args->mtx_death);
 		args->someone_died = 1;
 		pthread_mutex_unlock(&args->mtx_death);
-		print_log(p, "died");
 		return (1);
 	}
 	pthread_mutex_unlock(&p->mtx_meal);
@@ -64,10 +65,12 @@ void *monitor_routine(void *vphilos)
 	while (1)
 	{
 		pthread_mutex_lock(&args->mtx_death);
-		int died = args->someone_died;
-		pthread_mutex_unlock(&args->mtx_death);
-		if (died)
+		if (args->someone_died)
+		{
+			pthread_mutex_unlock(&args->mtx_death);
 			break;
+		}
+		pthread_mutex_unlock(&args->mtx_death);
 
 		i = 0;
 		while (i < args->num_philos)
