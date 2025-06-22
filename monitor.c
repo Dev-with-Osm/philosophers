@@ -1,19 +1,36 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   monitor.c                                         :+:      :+:    :+:   */
+/*   monitor.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: yourname <youremail@domain>                +#+  +:+       +#+        */
+/*   By: okhourss <okhourss@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/19 13:00:00 by yourname          #+#    #+#             */
-/*   Updated: 2025/06/19 13:00:00 by yourname         ###   ########.fr       */
+/*   Created: 2025/06/22 13:12:38 by okhourss          #+#    #+#             */
+/*   Updated: 2025/06/22 13:12:38 by okhourss         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
-#include <pthread.h>
 
-// Check if all philosophers have eaten the required number of meals
+static int check_death(t_philo *p, t_args *args)
+{
+	long now;
+
+	pthread_mutex_lock(&p->mtx_meal);
+	now = timestamp_ms();
+	if (now - p->last_meal_ts > args->time_to_die)
+	{
+		pthread_mutex_unlock(&p->mtx_meal);
+		pthread_mutex_lock(&args->mtx_death);
+		args->someone_died = 1;
+		pthread_mutex_unlock(&args->mtx_death);
+		print_log(p, "died");
+		return (1);
+	}
+	pthread_mutex_unlock(&p->mtx_meal);
+	return (0);
+}
+
 static int check_meals_completed(t_philo *philos, t_args *args)
 {
 	int i;
@@ -30,41 +47,28 @@ static int check_meals_completed(t_philo *philos, t_args *args)
 	}
 	if (finished == args->num_philos)
 	{
-		args->someone_died = 1;
-		return (1);
-	}
-	return (0);
-}
-
-// Check if a philosopher has died of starvation
-static int check_death(t_philo *p, t_args *args)
-{
-	long now;
-
-	pthread_mutex_lock(&p->mtx_meal);
-	now = timestamp_ms();
-	if (now - p->last_meal_ts > args->time_to_die)
-	{
-		pthread_mutex_unlock(&p->mtx_meal);
 		pthread_mutex_lock(&args->mtx_death);
 		args->someone_died = 1;
-		print_log(p, "died");
 		pthread_mutex_unlock(&args->mtx_death);
 		return (1);
 	}
-	pthread_mutex_unlock(&p->mtx_meal);
 	return (0);
 }
 
-// Monitor thread: checks death and meal completion
 void *monitor_routine(void *vphilos)
 {
 	t_philo *philos = (t_philo *)vphilos;
 	t_args *args = philos[0].args;
 	int i;
 
-	while (!args->someone_died)
+	while (1)
 	{
+		pthread_mutex_lock(&args->mtx_death);
+		int died = args->someone_died;
+		pthread_mutex_unlock(&args->mtx_death);
+		if (died)
+			break;
+
 		i = 0;
 		while (i < args->num_philos)
 		{
