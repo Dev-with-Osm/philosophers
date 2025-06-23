@@ -1,17 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philosopher.c                                     :+:      :+:    :+:   */
+/*   philosopher.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: okhourss <okhourss@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/19 12:11:19 by okhourss          #+#    #+#             */
-/*   Updated: 2025/06/22 14:00:00 by assistant         ###   ########.fr       */
+/*   Created: 2025/06/23 15:54:54 by okhourss          #+#    #+#             */
+/*   Updated: 2025/06/23 15:54:54 by okhourss         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
-#include <unistd.h>
 
 static int is_dead(t_args *args)
 {
@@ -38,6 +37,7 @@ static void handle_forks(t_philo *philo, int take)
 		first = philo->fork_left;
 		second = philo->fork_right;
 	}
+
 	if (take)
 	{
 		pthread_mutex_lock(first);
@@ -70,19 +70,22 @@ static void do_sleep_and_think(t_philo *philo)
 
 	print_log(philo, "is sleeping");
 	msleep_with_death_check(philo, args->time_to_sleep);
+
 	print_log(philo, "is thinking");
+	// msleep_with_death_check(philo, args->time_to_sleep);
+	usleep(500);
 }
 
 void *philo_routine(void *vphilo)
 {
 	t_philo *philo = (t_philo *)vphilo;
 	t_args *args = philo->args;
+
 	if (philo->id % 2 == 0)
 		usleep(100);
-	while (1)
+
+	while (!is_dead(args))
 	{
-		if (is_dead(args))
-			break;
 		if (args->num_meals >= 0)
 		{
 			pthread_mutex_lock(&philo->mtx_meal);
@@ -91,6 +94,7 @@ void *philo_routine(void *vphilo)
 			if (eaten >= args->num_meals)
 				break;
 		}
+
 		handle_forks(philo, 1);
 		do_eat(philo);
 		handle_forks(philo, 0);
